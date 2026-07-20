@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "powhttp": {
+      "url": "http://localhost:8383/mcp"
+    },
+    "har-analyzer": {
+      "url": "https://har-mcp.hypersolutions.co/mcp",
+      "auth": "oauth"
+    }
+  }
+}
