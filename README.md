@@ -25,36 +25,45 @@ Ask Codex things like:
 
 ## Install
 
-One command installs the plugin — skill and both MCP servers — into Codex:
+Requires the [Codex CLI](https://developers.openai.com/codex) (`npm install -g @openai/codex`).
+Register this repo as a marketplace, then install the plugin — skill and both MCP servers:
 
 ```bash
-npx codex-marketplace add Hyper-Solutions/hypersolutions-codex --plugin --global
+codex plugin marketplace add Hyper-Solutions/hypersolutions-codex
+codex plugin add hypersolutions@hypersolutions
 ```
 
-This clones the repo, reads the bundled [`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json),
-and installs **Hyper Solutions** as a managed Codex plugin. It works the same on macOS,
-Linux, and Windows (only Node / `npx` is required). Restart the Codex app afterward; the
-plugin then appears under **Settings → Plugins** and its `powhttp` and `har-analyzer` MCP
-servers show under **MCP servers → From plugins**.
+The `har-analyzer` MCP server is OAuth-protected, so authenticate it once (a browser opens
+for a Hyper Solutions sign-in):
 
-Drop `--global` to install only for the current project instead of every workspace.
+```bash
+codex mcp login har-analyzer
+```
 
-The skill auto-activates when your prompt matches Hyper Solutions / anti-bot integration
-or request-debugging work (see the `description` in `skills/hypersolutions/SKILL.md`).
+Restart the Codex app afterward. The plugin then appears under **Settings → Plugins**, and
+its `powhttp` and `har-analyzer` servers under **MCP servers → From plugins** (you can also
+authenticate `har-analyzer` from there instead of the CLI). The skill auto-activates when
+your prompt matches Hyper Solutions / anti-bot integration or request-debugging work (see
+the `description` in `skills/hypersolutions/SKILL.md`).
+
+> The `codex plugin` commands are the first-party install path. The npm `codex-marketplace`
+> tool registers the files but does **not** complete the native install, so the runtime
+> never enables the plugin — use the commands above.
 
 ### Development
 
-To work on the plugin from a local checkout, register the repo directory as a marketplace
-and install from it:
+To work on the plugin from a local checkout, add the repo directory as the marketplace
+source instead of the GitHub one:
 
 ```bash
 git clone https://github.com/Hyper-Solutions/hypersolutions-codex.git
-cd hypersolutions-codex
-codex plugin marketplace add .
+codex plugin marketplace add ./hypersolutions-codex
+codex plugin add hypersolutions@hypersolutions
 ```
 
 The bundled `.agents/plugins/marketplace.json` uses `source: local` with `path: "."`, so
-the repo root is the plugin. Reinstall after editing to pick up changes.
+the repo root is the plugin. Re-run `codex plugin add` (or `codex plugin marketplace upgrade`)
+after editing to pick up changes.
 
 ## Using the powhttp request debugger
 
