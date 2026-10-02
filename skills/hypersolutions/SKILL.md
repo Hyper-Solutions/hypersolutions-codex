@@ -76,9 +76,9 @@ handle all of this for you. Full detail + code: `references/authentication.md`.
 
 | Language | Package | Construct |
 |---|---|---|
-| Go | `github.com/Hyper-Solutions/hyper-sdk-go/v2` | `hyper.NewSession("api-key")` |
-| Python | `hyper-sdk` (PyPI) | `Session("api-key")` / `SessionAsync("api-key")` |
-| JS/TS | `hyper-sdk-js` (npm) | `new Session("api-key")` |
+| Go | `github.com/Hyper-Solutions/hyper-sdk-go/v3` (v3.0.0+; **v2 is deprecated**) | `hyper.NewSession("api-key")` |
+| Python | `hyper-sdk` (PyPI, 3.0.0+) | `Session("api-key")` / `SessionAsync("api-key")` |
+| JS/TS | `hyper-sdk-js` (npm, 4.0.0+) | `new Session("api-key")` |
 
 ```go
 // Go

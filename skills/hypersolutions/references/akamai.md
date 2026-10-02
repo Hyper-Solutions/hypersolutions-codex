@@ -122,7 +122,8 @@ consistent throughout.
 
 ## 3. SBSD (State Based Scraping Detection)
 
-`POST /sbsd`. Submit each generated payload to the target as `{"body":"<generated>"}`.
+`POST /sbsd`. Returns `{payload, context}`. Submit each generated payload to the target
+as `{"body":"<generated>"}`.
 
 ### `SbsdInput` fields
 
@@ -133,19 +134,38 @@ consistent throughout.
 | `Uuid` | `uuid` | `uuid` | The `v` UUID from the SBSD script URL |
 | `PageUrl` | `page_url` | `pageUrl` | Page URL |
 | `OCookie` (json `o`) | `o_cookie` | `o_cookie` (field `o`) | The `sbsd_o` **or** `bm_so` cookie value |
-| `Script` | `script` | `script` | SBSD script body |
+| `Script` | `script` | `script` | SBSD script body; **first call only** |
 | `AcceptLanguage` | `accept_language` | `acceptLanguage` | Accept-Language |
 | `IP` | `ip` | `ip` | Client/proxy IP |
+| `Context` | `context` | `context` (optional) | The `context` returned by the previous SBSD call; empty on the first call |
 
 > JS `SbsdInput` constructor order differs from field order:
-> `new SbsdInput(index, uuid, o_cookie, pageUrl, userAgent, script, ip, acceptLanguage)`.
+> `new SbsdInput(index, uuid, o_cookie, pageUrl, userAgent, script, ip, acceptLanguage, context?)`.
+
+### `script` vs `context`
+
+`script` and `context` are **mutually exclusive**: a request carrying both is rejected.
+
+1. **First** SBSD call: send `script`, no `context`. The response returns a `context`.
+2. **Every call after it**: send that `context` and **omit `script`**. Carry the newest
+   `context` from each response forward to the next call.
+
+Passing the context improves SBSD success rates and avoids re-uploading the script
+(roughly half a megabyte per call). It is **optional today and becomes mandatory soon**.
+`index` is unaffected and still works as before.
+
+Minimum SDK versions for `context`: Go `hyper-sdk-go/v3` **v3.0.0** (import path is now
+`github.com/Hyper-Solutions/hyper-sdk-go/v3`; v2 is deprecated), Python `hyper-sdk`
+**3.0.0**, JS/TS `hyper-sdk-js` **4.0.0**. `hyper-sdk-playwright` **1.0.0-beta.15**
+handles it automatically.
 
 SBSD appears in **three modes**:
 
 **(a) Passive / basic** — page loads normally but includes an SBSD script with a `v`
 UUID and **no `t`**: `<script src="/6mG.../J1CmB4HUQ?v=99b02ce6-...">`. Extract path+UUID
 (regex `([a-z\d/\-_\.]+)\?v=([^"'&]+)`), GET the script, then **post two sensors, index 0
-then index 1**, each to `POST /[path]` body `{"body":"<payload>"}`. Continue normally.
+then index 1**, each to `POST /[path]` body `{"body":"<payload>"}`. Generate index 0 with
+`script`, index 1 with the `context` it returned. Continue normally.
 
 **(b) Hard challenge** — initial GET returns a blocking challenge page whose script has
 **both** `v` and `t`: `?v=99b02ce6-...&t=183446612`. Extract with
@@ -154,10 +174,11 @@ payload (`o` = existing `sbsd_o`, else `bm_so`) → `POST /[path]?t=[t]` body
 `{"body":"<payload>"}` → GET `/` returns real content. (Single sensor; `index` omitted.)
 
 **(c) 429 block** — a protected call returns **HTTP 429** with body `{"t":"183446612"}`
-(token only). React: extract `t`; reuse the **stored** script path, `v` UUID, and script
-content from a prior solve; generate a fresh payload; `POST /[scriptPath]?t=<token>` body
-`{"body":"<payload>"}`; retry the original request. You must store path/UUID/script
-**before** you start making protected requests.
+(token only). React: extract `t`; reuse the **stored** script path, `v` UUID, and the
+latest `context` from a prior solve (the script content if you have made no SBSD call
+yet); generate a fresh payload; `POST /[scriptPath]?t=<token>` body
+`{"body":"<payload>"}`; retry the original request. You must store
+path/UUID/script/context **before** you start making protected requests.
 
 ---
 
@@ -185,4 +206,4 @@ Parse helpers:
 | Code | Meaning | Action |
 |---|---|---|
 | `428` | SEC-CPT challenge (`provider` = crypto / behavioral / adaptive) | Solve per provider; success = `sec_cpt` has `~3~` |
-| `429` with `{"t":...}` | SBSD block | Reuse stored path/UUID/script; POST fresh payload to `/[path]?t=<token>` |
+| `429` with `{"t":...}` | SBSD block | Reuse stored path/UUID + latest `context`; POST fresh payload to `/[path]?t=<token>` |
